@@ -301,6 +301,21 @@
             background: rgba(0,0,0,0.3);
             border-radius: 5px;
         }
+        #about-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: #4CAF50;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #about-button:hover {
+      background-color: #3e8e41;
+    }
     </style>
 </head>
 <body>
@@ -409,10 +424,16 @@
     <div id="author-text">by nqrelz
 
     </div>
-    
+    <button id="about-button">Об игре</button>
+    <script>
+      document.getElementById("about-button").addEventListener("click", function() {
+        window.open("first.html", "_blank");
+      });
+    </script>
    
 
     <script>
+        
           const ratingData = [
             { name: "Игрок1", level: 15, gold: 12500 },
             { name: "Игрок2", level: 12, gold: 9800 },
@@ -504,6 +525,7 @@
             },
             log: []
         };
+        
 
         // Элементы DOM
         const elements = {
@@ -567,6 +589,7 @@
             
             addLog(`Появился ${mob.name} (Ур. ${game.difficulty})!`);
         }
+        
 
         // Атака моба
         function attack() {
@@ -925,5 +948,107 @@
         // Запуск игры
         init();
     </script>
+   <!-- Добавьте этот код в index.html перед закрывающим тегом </body> -->
+<div id="inventory-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:1000;justify-content:center;align-items:center;">
+    <div style="background:#16213e;padding:20px;border-radius:10px;width:80%;max-width:500px;">
+        <h2 style="color:#f95959;">Инвентарь</h2>
+        <div id="inventory-items" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:15px 0;">
+            <!-- Слоты инвентаря будут добавляться здесь -->
+        </div>
+        <button onclick="closeInventory()" style="background:#f95959;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">Закрыть</button>
+    </div>
+</div>
+
+<script>
+// Добавьте в объект game:
+const game = {
+    // ... существующие свойства ...
+    inventory: [],
+    items: [
+        {id: 1, name: "Зелье здоровья", effect: "heal", value: 50, emoji: "❤️"},
+        {id: 2, name: "Усиление атаки", effect: "boost", value: 5, emoji: "⚔️"},
+        {id: 3, name: "Мешок золота", effect: "gold", value: 100, emoji: "💰"}
+    ],
+    // ...
+};
+
+// Функции для работы с инвентарем:
+function openInventory() {
+    const modal = document.getElementById('inventory-modal');
+    const itemsContainer = document.getElementById('inventory-items');
+    
+    itemsContainer.innerHTML = '';
+    game.inventory.forEach((item, index) => {
+        const itemElement = document.createElement('div');
+        itemElement.style.background = '#0f3460';
+        itemElement.style.padding = '10px';
+        itemElement.style.borderRadius = '5px';
+        itemElement.style.cursor = 'pointer';
+        itemElement.style.textAlign = 'center';
+        itemElement.innerHTML = `
+            <div style="font-size:24px;">${item.emoji}</div>
+            <div>${item.name}</div>
+            <small>${item.effect === 'heal' ? `+${item.value} HP` : 
+                   item.effect === 'boost' ? `+${item.value} атаки` : 
+                   `+${item.value} золота`}</small>
+        `;
+        
+        itemElement.addEventListener('click', () => useItem(index));
+        itemsContainer.appendChild(itemElement);
+    });
+    
+    modal.style.display = 'flex';
+}
+
+function closeInventory() {
+    document.getElementById('inventory-modal').style.display = 'none';
+}
+
+function useItem(index) {
+    const item = game.inventory[index];
+    if (!item) return;
+    
+    switch(item.effect) {
+        case 'heal':
+            addLog(`Использовано ${item.name}! +${item.value} HP`);
+            break;
+        case 'boost':
+            game.attackPower += item.value;
+            addLog(`Использовано ${item.name}! Атака +${item.value}`);
+            break;
+        case 'gold':
+            game.gold += item.value;
+            addLog(`Использовано ${item.name}! +${item.value} золота`);
+            break;
+    }
+    
+    game.inventory.splice(index, 1);
+    openInventory(); // Обновляем инвентарь
+    render();
+}
+
+function addRandomItem() {
+    if (Math.random() < 0.3) { // 30% шанс получить предмет
+        const randomItem = {...game.items[Math.floor(Math.random() * game.items.length)]};
+        game.inventory.push(randomItem);
+        addLog(`Получен предмет: ${randomItem.name}!`);
+    }
+}
+
+// Модифицируйте функцию defeatMob():
+function defeatMob() {
+    // ... существующий код ...
+    addRandomItem(); // Добавляем этот вызов после получения награды
+    // ...
+}
+
+// Добавьте кнопку инвентаря в интерфейс:
+document.getElementById('game-container').innerHTML += `
+    <button onclick="openInventory()" class="upgrade" style="margin-top:10px;">
+        Инвентарь (${game.inventory.length})
+    </button>`;
+</script>
+    
+    
 </body>
 </html>

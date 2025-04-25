@@ -178,3 +178,82 @@ function updateHealth() {
   elements.mobHealthFill.style.width = `${(percent / 100) * healthWidth}px`;
   elements.mobHpText.textContent = `${mob.health}/${mob.maxHealth}`;
 }
+document.getElementById("about-button").addEventListener("click", function() {
+    window.open("first.html", "_blank");
+  });
+  document.getElementById("about-link").href = "about.html";
+  // Класс Item
+class Item {
+    constructor(name, description, icon, stats) {
+      this.name = name;
+      this.description = description;
+      this.icon = icon;
+      this.stats = stats;
+    }
+  }
+  
+  // Класс MobDrop
+  class MobDrop {
+    constructor(mob, item, chance) {
+      this.mob = mob;
+      this.item = item;
+      this.chance = chance;
+    }
+  }
+  
+  // Класс CraftingRecipe
+  class CraftingRecipe {
+    constructor(name, description, ingredients, result) {
+      this.name = name;
+      this.description = description;
+      this.ingredients = ingredients;
+      this.result = result;
+    }
+  }
+  
+  // Класс Inventory
+  class Inventory {
+    constructor() {
+      this.items = [];
+    }
+  
+    addItem(item) {
+      this.items.push(item);
+    }
+  
+    craftItem(recipe) {
+      // Проверяем, есть ли все ингредиенты в инвентаре
+      for (let ingredient of recipe.ingredients) {
+        if (!this.items.includes(ingredient)) {
+          console.log("Не хватает ингредиентов для крафта");
+          return;
+        }
+      }
+  
+      // Крафтим предмет
+      let craftedItem = recipe.result;
+      this.addItem(craftedItem);
+      console.log(`Крафтим ${craftedItem.name}`);
+    }
+  }
+  
+  // Создаем предметы
+  let slimeGel = new Item("Слизь", "Слизь, выпадающая из слайма", "slime_gel_icon", { health: 10 });
+  let bone = new Item("Кость", "Кость, выпадающая из скелета", "bone_icon", { attack: 5 });
+  let scale = new Item("Чешуя", "Чешуя, выпадающая из дракона", "scale_icon", { defense: 10 });
+  let sword = new Item("Меч", "Меч, который увеличивает урон на 10%", "sword_icon", { attack: 10 });
+  
+  // Создаем рецепты крафта
+  let swordRecipe = new CraftingRecipe("Меч", "Меч, который увеличивает урон на 10%", [slimeGel, bone, scale], sword);
+  
+  // Создаем инвентарь
+  let inventory = new Inventory();
+  
+  // Добавляем предметы в инвентарь
+  inventory.addItem(slimeGel);
+  inventory.addItem(bone);
+  inventory.addItem(scale);
+  
+  // Крафтим меч
+  inventory.craftItem(swordRecipe);
+  

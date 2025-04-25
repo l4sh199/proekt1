@@ -8,3 +8,63 @@
   }.mob-health-fill {
     transition: width 0.5s ease-in-out;
   }
+
+  .game-container {
+    width: 800px;
+    height: 600px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  h1 {
+    font-size: 36px;
+    color: #00698f;
+  }
+  
+  p {
+    font-size: 18px;
+    color: #333;
+  }
+  
+  h2 {
+    font-size: 24px;
+    color: #00698f;
+  }
+  
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  li {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  a {
+    text-decoration: none;
+    color: #00698f;
+  }
+  
+  a:hover {
+    color: #003366;
+  }
+  #about-button {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  #about-button:hover {
+    background-color: #3e8e41;
+  }
