@@ -524,11 +524,91 @@
                 ]
             },
             log: []
+            inventory: [],
+    items: [
+        {id: 1, name: "Зелье здоровья", effect: "heal", value: 50, emoji: "❤️"},
+        {id: 2, name: "Усиление атаки", effect: "boost", value: 5, emoji: "⚔️"},
+        {id: 3, name: "Мешок золота", effect: "gold", value: 100, emoji: "💰"}
+    ],
+    // ...
+};
+
+// Функции для работы с инвентарем:
+function openInventory() {
+    const modal = document.getElementById('inventory-modal');
+    const itemsContainer = document.getElementById('inventory-items');
+    
+    itemsContainer.innerHTML = '';
+    game.inventory.forEach((item, index) => {
+        const itemElement = document.createElement('div');
+        itemElement.style.background = '#0f3460';
+        itemElement.style.padding = '10px';
+        itemElement.style.borderRadius = '5px';
+        itemElement.style.cursor = 'pointer';
+        itemElement.style.textAlign = 'center';
+        itemElement.innerHTML = `
+            <div style="font-size:24px;">${item.emoji}</div>
+            <div>${item.name}</div>
+            <small>${item.effect === 'heal' ? `+${item.value} HP` : 
+                   item.effect === 'boost' ? `+${item.value} атаки` : 
+                   `+${item.value} золота`}</small>
+        `;
+        
+        itemElement.addEventListener('click', () => useItem(index));
+        itemsContainer.appendChild(itemElement);
+    });
+    
+    modal.style.display = 'flex';
+}
+
+function closeInventory() {
+    document.getElementById('inventory-modal').style.display = 'none';
+}
+
+function useItem(index) {
+    const item = game.inventory[index];
+    if (!item) return;
+    
+    switch(item.effect) {
+        case 'heal':
+            addLog(`Использовано ${item.name}! +${item.value} HP`);
+            break;
+        case 'boost':
+            game.attackPower += item.value;
+            addLog(`Использовано ${item.name}! Атака +${item.value}`);
+            break;
+        case 'gold':
+            game.gold += item.value;
+            addLog(`Использовано ${item.name}! +${item.value} золота`);
+            break;
+    }
+    
+    game.inventory.splice(index, 1);
+    openInventory(); // Обновляем инвентарь
+    render();
+}
+
+function addRandomItem() {
+    if (Math.random() < 0.3) { // 30% шанс получить предмет
+        const randomItem = {...game.items[Math.floor(Math.random() * game.items.length)]};
+        game.inventory.push(randomItem);
+        addLog(`Получен предмет: ${randomItem.name}!`);
+    }
+}
+
+// Модифицируйте функцию defeatMob():
+function defeatMob() {
+    // ... существующий код ...
+    addRandomItem(); // Добавляем этот вызов после получения награды
+    // ...
+}
+
+// Добавьте кнопку инвентаря в интерфейс:
+document.getElementById('game-container').innerHTML += `
+    <button onclick="openInventory()" class="upgrade" style="margin-top:10px;">
+        Инвентарь (${game.inventory.length})
+    </button>`;
         };
-   
-
-
-
         
 
         // Элементы DOM
