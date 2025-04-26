@@ -145,5 +145,36 @@
             }
         });
         </script>
+        <script>
+            document.addEventListener('click', async () => {
+    const playerName = prompt('Введите ваше имя:', 'Игрок') || 'Игрок';
+    
+    try {
+        // Пытаемся войти
+        let response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: playerName})
+        });
+        
+        if (!response.ok) {
+            // Если игрок не найден, регистрируем
+            response = await fetch('http://localhost:5000/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: playerName})
+            });
+        }
+        
+        const playerData = await response.json();
+        localStorage.setItem('playerData', JSON.stringify(playerData));
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка соединения с сервером');
+    }
+});
+        </script>
 </body>
 </html>

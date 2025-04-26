@@ -822,18 +822,23 @@
         }
 
         // Сохранение игры
-        function saveGame() {
-            localStorage.setItem('3dRpgClicker', JSON.stringify({
-                gold: game.gold,
+        async function saveGame() {
+    if (!game.playerId) return;
+    
+    try {
+        await fetch('http://localhost:5000/api/update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                id: game.playerId,
                 level: game.level,
-                exp: game.exp,
-                expNeeded: game.expNeeded,
-                attackPower: game.attackPower,
-                autoPower: game.autoPower,
-                skills: game.skills,
-                difficulty: game.difficulty
-            }));
-        }
+                gold: game.gold
+            })
+        });
+    } catch (error) {
+        console.error('Ошибка сохранения:', error);
+    }
+}
 
         // Загрузка игры
         function loadGame() {
@@ -965,6 +970,18 @@
     }
     
     modal.style.display = 'flex';
+}
+async function showRating() {
+    try {
+        const response = await fetch('http://localhost:5000/api/leaderboard');
+        const leaderboard = await response.json();
+        
+        // Отрисовка таблицы лидеров
+        // ...
+        
+    } catch (error) {
+        console.error('Ошибка загрузки рейтинга:', error);
+    }
 }
     </script>
    <!-- Добавьте этот код в index.html перед закрывающим тегом </body> -->
