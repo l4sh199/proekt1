@@ -115,27 +115,40 @@ async function showRating() {
 
 // Добавляем поле для имени игрока в игре
 const game = {
+  playerId: null,
+    playerName: '',
+  // В объект game
+inventory: {
+  items: [],
+  maxSlots: 9
+},
     // ... остальные свойства ...
     playerName: '',
     // ...
 };
 
 // Обновленная инициализация игры
-function init() {
-    // ... существующий код ...
+async function init() {
+  // Загружаем данные игрока
+  const savedData = localStorage.getItem('playerData');
+  if (!savedData) {
+      window.location.href = 'first.html';
+      return;
+  }
+  try {
+    const response = await fetch(`http://localhost:5000/api/player/${game.playerId}`);
+    if (response.ok) {
+        const data = await response.json();
+        game.level = data.level;
+        game.gold = data.gold;
+    }
+} catch (error) {
+    console.error('Ошибка загрузки данных:', error);
+}
     
-    // Запрашиваем имя игрока
-    game.playerName = prompt('Введите ваше имя для рейтинга:', 'Игрок') || 'Игрок';
-    
-    // Обновляем кнопку рейтинга
-    document.getElementById('show-rating').addEventListener('click', showRating);
-    document.getElementById('close-rating').addEventListener('click', hideRating);
-    
-    // Сохраняем результат при закрытии страницы
-    window.addEventListener('beforeunload', async () => {
-        await savePlayerResult(game.playerName, game.level, game.gold);
-        saveGame(); // сохраняем локальные данные
-    });
+  const playerData = JSON.parse(savedData);
+  game.playerId = playerData.id;
+  game.playerName = playerData.name;
 }
 function updateHealth() {
   if (!elements.mobHealth) {
@@ -256,4 +269,43 @@ class Item {
   
   // Крафтим меч
   inventory.craftItem(swordRecipe);
-  
+  let clickCombo = 0;
+let lastClickTime = 0;
+
+mobElement.addEventListener('mousedown', function() {
+    const now = Date.now();
+    if (now - lastClickTime < 200) { // 200ms между кликами
+        clickCombo++;
+        showComboEffect(clickCombo);
+    } else {
+        clickCombo = 1;
+    }
+    lastClickTime = now;
+    
+    // Автоматические клики при удержании
+    this.autoClickInterval = setInterval(() => {
+        attack();
+        clickCombo++;
+        if (clickCombo % 5 === 0) showComboEffect(clickCombo);
+    }, 100);
+});
+
+mobElement.addEventListener('mouseup', function() {
+    clearInterval(this.autoClickInterval);
+});
+   
+    // Сохранение в БД
+    try {
+      await fetch(`http://localhost:5000/api/player/${game.playerId}/update`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              level: game.level,
+              gold: game.gold
+          })
+      });
+  } catch (error) {
+      console.error('Ошибка сохранения:', error);
+  }

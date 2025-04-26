@@ -67,3 +67,52 @@ if __name__ == '__main__':
     if not os.path.exists(DATABASE):
         init_db()
     app.run(debug=True)
+@app.route('/api/login', methods=['POST'])
+def player_login():
+    data1 = request.json
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Проверяем существование игрока
+    cursor.execute('SELECT id, name, level, gold FROM players WHERE name = ?', (data1['name'],))
+    player = cursor.fetchone()
+    
+    if not player:
+        # Создаем нового игрока
+        cursor.execute('''
+            INSERT INTO players (name, level, gold)
+            VALUES (?, 1, 0)
+        ''', (data1['name'],))
+        db.commit()
+        player_id = cursor.lastrowid
+        return jsonify({
+            'id': player_id,
+            'name': data1['name'],
+            'level': 1,
+            'gold': 0,
+            'isNew': True
+        })
+    else:
+        return jsonify({
+            'id': player[0],
+            'name': player[1],
+            'level': player[2],
+            'gold': player[3],
+            'isNew': False
+        })
+
+@app.route('/api/player/<int:player_id>', methods=['GET'])
+def get_player(player_id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT name, level, gold FROM players WHERE id = ?', (player_id,))
+    player = cursor.fetchone()
+    
+    if player:
+        return jsonify({
+            'name': player[0],
+            'level': player[1],
+            'gold': player[2]
+        })
+    else:
+        return jsonify({'error': 'Player not found'}), 404

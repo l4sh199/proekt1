@@ -118,5 +118,32 @@
             window.location.href = 'index.html';
         });
     </script>
+    <script>
+        document.addEventListener('click', async () => {
+            const playerName = prompt('Введите ваше имя для входа:', 'Игрок') || 'Игрок';
+            
+            try {
+                // Проверяем/создаем игрока в БД
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: playerName
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Ошибка входа');
+                
+                const playerData = await response.json();
+                localStorage.setItem('playerData', JSON.stringify(playerData));
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка входа. Попробуйте позже.');
+            }
+        });
+        </script>
 </body>
 </html>
