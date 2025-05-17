@@ -1,199 +1,172 @@
-from flask import Flask, jsonify, request, g
+from flask import Flask, request, jsonify, g
 import sqlite3
 import os
-from pathlib import Path
+import hashlib
+import secrets
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
-# Путь к базе данных
-DATABASE_PATH = r'D:\rpg\ratings.db'
+DATABASE_PATH = r'D:\rpg\registrs.db'
 
-def get_db():
-    """Подключение к базе данных"""
-    db = getattr(g, '_database', None)
-    if db is None:
-        # Создаем папку, если ее нет
-        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-        db = g._database = sqlite3.connect(DATABASE_PATH)
-        db.row_factory = sqlite3.Row  # Для доступа к полям по имени
-    return db
+app.config.update({
+    'SECRET_KEY': secrets.token_hex(32),
+    'DATABASE': DATABASE_PATH,
+    'PEPPER': 'your-random-pepper-string'
+})
 
 def init_db():
-    """Инициализация базы данных"""
     with app.app_context():
         db = get_db()
         cursor = db.cursor()
         
-        # Создаем таблицу игроков, если ее нет
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS players (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
                 level INTEGER DEFAULT 1,
                 gold INTEGER DEFAULT 0,
-                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
-        # Создаем таблицу рейтинга
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS leaderboard (
-                player_id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                score INTEGER DEFAULT 0,
-                FOREIGN KEY(player_id) REFERENCES players(id)
-            )
-        ''')
-        
         db.commit()
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+        db = g._database = sqlite3.connect(DATABASE_PATH)
+        db.row_factory = sqlite3.Row
+    return db
 
 @app.teardown_appcontext
 def close_connection(exception):
-    """Закрытие соединения с БД"""
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
+def hash_password(password):
+    salt = secrets.token_hex(16)
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000
+    ).hex() + ':' + salt
+
+def verify_password(stored_hash, password):
+    if ':' not in stored_hash:
+        return False
+    hashed, salt = stored_hash.split(':')
+    new_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000
+    ).hex()
+    return hashed == new_hash
+
 @app.route('/api/register', methods=['POST'])
-def register_player():
-    """Регистрация нового игрока"""
-    data = request.json
-    if not data or 'name' not in data:
-        return jsonify({'error': 'Name is required'}), 400
-    
-    db = get_db()
-    cursor = db.cursor()
-    
+def register():
     try:
-        # Пытаемся создать нового игрока
-        cursor.execute('''
-            INSERT INTO players (name, level, gold)
-            VALUES (?, 1, 0)
-        ''', (data['name'],))
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
         
-        player_id = cursor.lastrowid
+        if not all([username, email, password]):
+            return jsonify({'error': 'Все поля обязательны'}), 400
         
-        # Добавляем в таблицу лидеров
+        db = get_db()
+        cursor = db.cursor()
+        
+        cursor.execute('SELECT 1 FROM players WHERE username = ? OR email = ?', (username, email))
+        if cursor.fetchone():
+            return jsonify({'error': 'Пользователь уже существует'}), 400
+        
+        password_hash = hash_password(password)
+        
         cursor.execute('''
-            INSERT INTO leaderboard (player_id, name, score)
-            VALUES (?, ?, 0)
-        ''', (player_id, data['name']))
+            INSERT INTO players (username, email, password_hash)
+            VALUES (?, ?, ?)
+        ''', (username, email, password_hash))
         
         db.commit()
         
-        return jsonify({
-            'id': player_id,
-            'name': data['name'],
-            'level': 1,
-            'gold': 0,
-            'message': 'Player registered successfully'
-        })
+        cursor.execute('SELECT id, username, level, gold FROM players WHERE id = ?', (cursor.lastrowid,))
+        player = cursor.fetchone()
         
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Player name already exists'}), 400
+        return jsonify(dict(player)), 201
+        
+    except Exception as e:
+        print(f"Ошибка регистрации: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
 
 @app.route('/api/login', methods=['POST'])
-def login_player():
-    """Вход игрока"""
-    data = request.json
-    if not data or 'name' not in data:
-        return jsonify({'error': 'Name is required'}), 400
-    
-    db = get_db()
-    cursor = db.cursor()
-    
-    # Ищем игрока
-    cursor.execute('''
-        SELECT id, name, level, gold 
-        FROM players 
-        WHERE name = ?
-    ''', (data['name'],))
-    
-    player = cursor.fetchone()
-    
-    if player:
-        return jsonify(dict(player))
-    else:
-        return jsonify({'error': 'Player not found'}), 404
-
-@app.route('/api/update', methods=['POST'])
-def update_player():
-    """Обновление данных игрока"""
-    data = request.json
-    if not data or 'id' not in data:
-        return jsonify({'error': 'Player ID is required'}), 400
-    
-    db = get_db()
-    cursor = db.cursor()
-    
+def login():
     try:
-        # Обновляем основные данные
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not all([username, password]):
+            return jsonify({'error': 'Логин и пароль обязательны'}), 400
+        
+        db = get_db()
+        cursor = db.cursor()
+        
         cursor.execute('''
-            UPDATE players 
-            SET level = ?, gold = ?
-            WHERE id = ?
-        ''', (data.get('level', 1), data.get('gold', 0), data['id']))
+            SELECT id, username, password_hash, level, gold FROM players
+            WHERE username = ?
+        ''', (username,))
         
-        # Обновляем рейтинг (score = level * 100 + gold)
-        score = data.get('level', 1) * 100 + data.get('gold', 0)
-        cursor.execute('''
-            UPDATE leaderboard
-            SET score = ?, name = (SELECT name FROM players WHERE id = ?)
-            WHERE player_id = ?
-        ''', (score, data['id'], data['id']))
+        player = cursor.fetchone()
         
-        db.commit()
-        
+        if not player:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+            
+        if not verify_password(player['password_hash'], password):
+            return jsonify({'error': 'Неверный пароль'}), 401
+            
         return jsonify({
-            'status': 'success',
-            'message': 'Player data updated'
-        })
+            'id': player['id'],
+            'username': player['username'],
+            'level': player['level'],
+            'gold': player['gold']
+        }), 200
+        
+    except Exception as e:
+        print(f"Ошибка входа: {str(e)}")
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+@app.route('/api/player/<int:player_id>', methods=['GET'])
+def get_player(player_id):
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            SELECT id, username, level, gold FROM players WHERE id = ?
+        ''', (player_id,))
+        
+        player = cursor.fetchone()
+        if player:
+            return jsonify(dict(player)), 200
+        return jsonify({'error': 'Игрок не найден'}), 404
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/leaderboard', methods=['GET'])
-def get_leaderboard():
-    """Получение таблицы лидеров"""
-    db = get_db()
-    cursor = db.cursor()
-    
-    cursor.execute('''
-        SELECT p.id, p.name, p.level, p.gold, l.score,
-               (SELECT COUNT(*) FROM leaderboard WHERE score >= l.score) AS rank
-        FROM players p
-        JOIN leaderboard l ON p.id = l.player_id
-        ORDER BY l.score DESC
-        LIMIT 10
-    ''')
-    
-    leaderboard = []
-    for row in cursor.fetchall():
-        leaderboard.append(dict(row))
-    
-    return jsonify(leaderboard)
-
-@app.route('/api/player/<int:player_id>', methods=['GET'])
-def get_player(player_id):
-    """Получение данных конкретного игрока"""
-    db = get_db()
-    cursor = db.cursor()
-    
-    cursor.execute('''
-        SELECT p.id, p.name, p.level, p.gold, l.score,
-               (SELECT COUNT(*) FROM leaderboard WHERE score >= l.score) AS rank
-        FROM players p
-        JOIN leaderboard l ON p.id = l.player_id
-        WHERE p.id = ?
-    ''', (player_id,))
-    
-    player = cursor.fetchone()
-    
-    if player:
-        return jsonify(dict(player))
-    else:
-        return jsonify({'error': 'Player not found'}), 404
-
 if __name__ == '__main__':
-    init_db()  # Инициализация БД при запуске
-    app.run(debug=True, port=5000)
+    print(f"Инициализация БД по пути: {DATABASE_PATH}")
+    print(f"Права на запись: {os.access(os.path.dirname(DATABASE_PATH), os.W_OK)}")
+    init_db()
+    app.run(host='0.0.0.0', port=5000, debug=True)

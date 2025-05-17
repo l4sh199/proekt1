@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вход в RPG Кликер</title>
+    <style>
+        /* Ваши стили остаются без изменений */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1a1a2e;
+            overflow: hidden;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+        }
+        
+        .auth-container {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 300px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        /* Остальные стили остаются такими же */
+    </style>
+</head>
+<body>
+    <!-- HTML-структура остается без изменений -->
+    <div class="auth-container" id="login-container">
+        <h2 class="auth-title">Вход в игру</h2>
+        <form class="auth-form" id="login-form">
+            <input type="text" id="login-username" placeholder="Логин" required>
+            <input type="password" id="login-password" placeholder="Пароль" required>
+            <div id="login-error" class="error-message" style="display: none;"></div>
+            <button type="submit">Войти</button>
+        </form>
+        <div class="auth-switch" id="switch-to-register">Нет аккаунта? Зарегистрироваться</div>
+        <div class="slime"></div>
+    </div>
+    
+    <div class="auth-container" id="register-container" style="display: none;">
+        <h2 class="auth-title">Регистрация</h2>
+        <form class="auth-form" id="register-form">
+            <input type="text" id="reg-username" placeholder="Логин" required minlength="3">
+            <input type="email" id="reg-email" placeholder="Email" required>
+            <input type="password" id="reg-password" placeholder="Пароль (минимум 6 символов)" required minlength="6">
+            <input type="password" id="reg-confirm-password" placeholder="Подтвердите пароль" required>
+            <div id="reg-error" class="error-message" style="display: none;"></div>
+            <div id="reg-success" class="success-message" style="display: none;"></div>
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+        <div class="auth-switch" id="switch-to-login">Уже есть аккаунт? Войти</div>
+        <div class="slime"></div>
+    </div>
+
+    <script>
+        // Переключение между формами (остается без изменений)
+        document.getElementById('switch-to-register').addEventListener('click', () => {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+            resetMessages();
+        });
+        
+        document.getElementById('switch-to-login').addEventListener('click', () => {
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+            resetMessages();
+        });
+
+        function resetMessages() {
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('reg-error').style.display = 'none';
+            document.getElementById('reg-success').style.display = 'none';
+        }
+
+        function showMessage(elementId, message, isError = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = isError ? 'error-message' : 'success-message';
+        }
+
+        // Валидация email
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Обработка входа (обновленная версия)
+   // Обработка входа
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetMessages();
+    
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    
+    if (!username || !password) {
+        showMessage('login-error', 'Заполните все поля');
+        return;
+    }
+    
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Ошибка входа');
+        }
+        
+        // Сохраняем данные игрока
+        localStorage.setItem('playerData', JSON.stringify({
+            id: result.id,
+            username: result.username,
+            level: result.level,
+            gold: result.gold
+        }));
+        
+        // Перенаправляем на игровую страницу
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('Ошибка входа:', error);
+        showMessage('login-error', error.message);
+    }
+});
+
+// Обработка регистрации
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetMessages();
+    
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value.trim();
+    const confirmPassword = document.getElementById('reg-confirm-password').value.trim();
+    
+    // Валидация
+    if (!username || !email || !password || !confirmPassword) {
+        showMessage('reg-error', 'Заполните все поля');
+        return;
+    }
+    
+    if (username.length < 3) {
+        showMessage('reg-error', 'Логин должен быть не менее 3 символов');
+        return;
+    }
+    
+    if (!isValidEmail(email)) {
+        showMessage('reg-error', 'Введите корректный email');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showMessage('reg-error', 'Пароль должен быть не менее 6 символов');
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        showMessage('reg-error', 'Пароли не совпадают');
+        return;
+    }
+    
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                password: password
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Ошибка регистрации');
+        }
+        
+        // Автоматически входим после регистрации
+        localStorage.setItem('playerData', JSON.stringify({
+            id: result.id,
+            username: result.username,
+            level: result.level,
+            gold: result.gold
+        }));
+        
+        // Перенаправляем на игровую страницу
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('Ошибка регистрации:', error);
+        showMessage('reg-error', error.message);
+    }
+});
+        
+        // Обработка регистрации (обновленная версия)
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resetMessages();
+            
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const confirmPassword = document.getElementById('reg-confirm-password').value.trim();
+            
+            // Валидация
+            if (!username || !email || !password || !confirmPassword) {
+                showMessage('reg-error', 'Заполните все поля');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showMessage('reg-error', 'Логин должен быть не менее 3 символов');
+                return;
+            }
+            
+            if (!isValidEmail(email)) {
+                showMessage('reg-error', 'Введите корректный email');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('reg-error', 'Пароль должен быть не менее 6 символов');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showMessage('reg-error', 'Пароли не совпадают');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Ошибка регистрации');
+                }
+                
+                // Автоматически входим после регистрации
+                localStorage.setItem('playerData', JSON.stringify({
+                    id: result.id,
+                    username: result.username,
+                    level: result.level,
+                    gold: result.gold
+                }));
+                
+                // Перенаправляем на игровую страницу
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('Ошибка регистрации:', error);
+                showMessage('reg-error', error.message);
+            }
+        });
+    </script>
+</body>
+</html>

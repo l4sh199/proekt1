@@ -1,19 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Добро пожаловать!</title>
+    <title>О RPG Кликере</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             background: #1a1a2e;
             overflow: hidden;
-            cursor: pointer;
+            font-family: Arial, sans-serif;
+            color: white;
         }
+        
+        .game-info {
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+        
+        .game-info h1 {
+            color: #f95959;
+            margin-bottom: 20px;
+        }
+        
+        .game-info ul {
+            text-align: left;
+            margin: 20px auto;
+            max-width: 400px;
+        }
+        
+        .start-button {
+            background: #f95959;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .start-button:hover {
+            background: #ff6b6b;
+        }
+        
+        /* Анимация слайма (ваш существующий CSS) */
         .slime {
             width: 200px;
             height: 150px;
@@ -24,7 +62,10 @@
                 0 10px 30px rgba(0,0,0,0.3);
             position: relative;
             animation: bounce 2s infinite ease-in-out;
+            cursor: pointer;
+            margin-top: 20px;
         }
+        
         .eyes {
             position: absolute;
             top: 50px;
@@ -33,6 +74,7 @@
             justify-content: center;
             gap: 30px;
         }
+        
         .eye {
             width: 30px;
             height: 40px;
@@ -41,6 +83,7 @@
             position: relative;
             animation: blink 3s infinite;
         }
+        
         .pupil {
             width: 15px;
             height: 15px;
@@ -51,6 +94,7 @@
             left: 7px;
             transition: all 0.3s;
         }
+        
         .mouth {
             position: absolute;
             top: 90px;
@@ -60,15 +104,6 @@
             height: 20px;
             background: #ff6b6b;
             border-radius: 0 0 20px 20px;
-        }
-        .title {
-            position: absolute;
-            top: 20%;
-            color: white;
-            font-family: Arial, sans-serif;
-            font-size: 24px;
-            text-align: center;
-            width: 100%;
         }
         
         @keyframes bounce {
@@ -83,8 +118,23 @@
     </style>
 </head>
 <body>
-    <div class="title">Нажмите на слайма, чтобы начать игру</div>
-    <div class="slime">
+    <div class="game-info">
+        <h1>RPG Кликер</h1>
+        <p>Увлекательная игра в жанре clicker-RPG с прокачкой и сражениями!</p>
+        
+        <h3>Как играть:</h3>
+        <ul>
+            <li>Кликайте по мобам, чтобы наносить урон</li>
+            <li>Зарабатывайте золото и опыт</li>
+            <li>Прокачивайте атаку и навыки</li>
+            <li>Сражайтесь с 4 типами мобов</li>
+            <li>Поднимайтесь в глобальном рейтинге</li>
+        </ul>
+        
+        <button class="start-button" id="start-button">Начать игру</button>
+    </div>
+    
+    <div class="slime" id="slime">
         <div class="eyes">
             <div class="eye"><div class="pupil"></div></div>
             <div class="eye"><div class="pupil"></div></div>
@@ -93,7 +143,7 @@
     </div>
 
     <script>
-        // Анимация зрачков, следящих за курсором
+        // Анимация зрачков
         document.addEventListener('mousemove', (e) => {
             const pupils = document.querySelectorAll('.pupil');
             pupils.forEach(pupil => {
@@ -113,68 +163,22 @@
             });
         });
         
-        // Переход на index.html при клике
-        document.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-    </script>
-    <script>
-        document.addEventListener('click', async () => {
-            const playerName = prompt('Введите ваше имя для входа:', 'Игрок') || 'Игрок';
+        // Единственный обработчик для начала игры
+        document.getElementById('start-button').addEventListener('click', startGame);
+        document.getElementById('slime').addEventListener('click', startGame);
+        
+        async function startGame() {
+            // Проверяем авторизацию
+            const playerData = JSON.parse(localStorage.getItem('playerData'));
             
-            try {
-                // Проверяем/создаем игрока в БД
-                const response = await fetch('http://localhost:5000/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        name: playerName
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Ошибка входа');
-                
-                const playerData = await response.json();
-                localStorage.setItem('playerData', JSON.stringify(playerData));
+            if (playerData) {
+                // Если уже авторизованы - сразу в игру
                 window.location.href = 'index.html';
-            } catch (error) {
-                console.error('Ошибка:', error);
-                alert('Ошибка входа. Попробуйте позже.');
+            } else {
+                // Если нет - на страницу регистрации
+                window.location.href = 'registration.html';
             }
-        });
-        </script>
-        <script>
-            document.addEventListener('click', async () => {
-    const playerName = prompt('Введите ваше имя:', 'Игрок') || 'Игрок';
-    
-    try {
-        // Пытаемся войти
-        let response = await fetch('http://localhost:5000/api/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: playerName})
-        });
-        
-        if (!response.ok) {
-            // Если игрок не найден, регистрируем
-            response = await fetch('http://localhost:5000/api/register', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: playerName})
-            });
         }
-        
-        const playerData = await response.json();
-        localStorage.setItem('playerData', JSON.stringify(playerData));
-        window.location.href = 'index.html';
-        
-    } catch (error) {
-        console.error('Ошибка:', error);
-        alert('Ошибка соединения с сервером');
-    }
-});
-        </script>
+    </script>
 </body>
 </html>

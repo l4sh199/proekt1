@@ -2207,3 +2207,854 @@ async function showRating() {
     
 </body>
 </html>
+----
+<!-- first.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Вход в RPG Кликер</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1a1a2e;
+            overflow: hidden;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+        }
+        
+        .auth-container {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 300px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .auth-title {
+            color: #f95959;
+            margin-bottom: 20px;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #4e4e8d;
+            color: white;
+        }
+        
+        .auth-form button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #f95959;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .auth-form button:hover {
+            background: #ff6b6b;
+        }
+        
+        .auth-switch {
+            color: #888;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        
+        .auth-switch:hover {
+            color: #aaa;
+        }
+        
+        .slime {
+            width: 200px;
+            height: 150px;
+            background: #55ff55;
+            border-radius: 50% 50% 40% 40%;
+            box-shadow: 
+                inset 0 0 20px #44cc44,
+                0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            animation: bounce 2s infinite ease-in-out;
+            margin: 20px auto;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container" id="login-container">
+        <h2 class="auth-title">Вход в игру</h2>
+        <form class="auth-form" id="login-form">
+            <input type="text" id="login-username" placeholder="Логин" required>
+            <input type="password" id="login-password" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
+        </form>
+        <div class="auth-switch" id="switch-to-register">Нет аккаунта? Зарегистрироваться</div>
+        <div class="slime"></div>
+    </div>
+    
+    <div class="auth-container" id="register-container" style="display: none;">
+        <h2 class="auth-title">Регистрация</h2>
+        <form class="auth-form" id="register-form">
+            <input type="text" id="reg-username" placeholder="Логин" required>
+            <input type="email" id="reg-email" placeholder="Email" required>
+            <input type="password" id="reg-password" placeholder="Пароль" required>
+            <input type="password" id="reg-confirm-password" placeholder="Подтвердите пароль" required>
+            <button type="submit">Зарегистрироваться</button>
+        </form>
+        <div class="auth-switch" id="switch-to-login">Уже есть аккаунт? Войти</div>
+        <div class="slime"></div>
+    </div>
+
+    <script>
+        // Переключение между формами входа и регистрации
+        document.getElementById('switch-to-register').addEventListener('click', () => {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+        });
+        
+        document.getElementById('switch-to-login').addEventListener('click', () => {
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        });
+        
+        // Обработка входа
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Неверный логин или пароль');
+                }
+                
+                const data = await response.json();
+                localStorage.setItem('playerData', JSON.stringify(data));
+                window.location.href = 'index.html';
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+        
+        // Обработка регистрации
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const confirmPassword = document.getElementById('reg-confirm-password').value;
+            
+            if (password !== confirmPassword) {
+                alert('Пароли не совпадают!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+                
+                const data = await response.json();
+                alert('Регистрация успешна! Теперь вы можете войти.');
+                document.getElementById('register-container').style.display = 'none';
+                document.getElementById('login-container').style.display = 'block';
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+    </script>
+</body>
+</html>
+-----
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Добро пожаловать!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1a1a2e;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .slime {
+            width: 200px;
+            height: 150px;
+            background: #55ff55;
+            border-radius: 50% 50% 40% 40%;
+            box-shadow: 
+                inset 0 0 20px #44cc44,
+                0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            animation: bounce 2s infinite ease-in-out;
+        }
+        .eyes {
+            position: absolute;
+            top: 50px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+        }
+        .eye {
+            width: 30px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            position: relative;
+            animation: blink 3s infinite;
+        }
+        .pupil {
+            width: 15px;
+            height: 15px;
+            background: #333;
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            left: 7px;
+            transition: all 0.3s;
+        }
+        .mouth {
+            position: absolute;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 20px;
+            background: #ff6b6b;
+            border-radius: 0 0 20px 20px;
+        }
+        .title {
+            position: absolute;
+            top: 20%;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes blink {
+            0%, 45%, 55%, 100% { height: 40px; }
+            50% { height: 5px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Нажмите на слайма, чтобы начать игру</div>
+    <div class="slime">
+        <div class="eyes">
+            <div class="eye"><div class="pupil"></div></div>
+            <div class="eye"><div class="pupil"></div></div>
+        </div>
+        <div class="mouth"></div>
+    </div>
+
+    <script>
+        // Анимация зрачков, следящих за курсором
+        document.addEventListener('mousemove', (e) => {
+            const pupils = document.querySelectorAll('.pupil');
+            pupils.forEach(pupil => {
+                const eye = pupil.parentElement;
+                const eyeRect = eye.getBoundingClientRect();
+                const eyeCenterX = eyeRect.left + eyeRect.width/2;
+                const eyeCenterY = eyeRect.top + eyeRect.height/2;
+                
+                const angle = Math.atan2(e.clientY - eyeCenterY, e.clientX - eyeCenterX);
+                const distance = Math.min(7, 
+                    Math.sqrt(Math.pow(e.clientX - eyeCenterX, 2) + Math.pow(e.clientY - eyeCenterY, 2)) / 10);
+                
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+                
+                pupil.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+        
+        // Переход на index.html при клике
+        document.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    </script>
+    <script>
+        document.addEventListener('click', async () => {
+            const playerName = prompt('Введите ваше имя для входа:', 'Игрок') || 'Игрок';
+            
+            try {
+                // Проверяем/создаем игрока в БД
+                const response = await fetch('http://localhost:5000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: playerName
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Ошибка входа');
+                
+                const playerData = await response.json();
+                localStorage.setItem('playerData', JSON.stringify(playerData));
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Ошибка входа. Попробуйте позже.');
+            }
+        });
+        </script>
+        <script>
+   document.addEventListener('click', async () => {
+    const playerName = prompt('Введите ваше имя:', 'Игрок') || 'Игрок';
+    
+    try {
+        // Пытаемся войти
+        let response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: playerName})
+        });
+        
+        if (!response.ok) {
+            // Если игрок не найден, регистрируем
+            response = await fetch('http://localhost:5000/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: playerName})
+            });
+        }
+        
+        const playerData = await response.json();
+        localStorage.setItem('playerData', JSON.stringify(playerData));
+        window.location.href = 'index.html';
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Ошибка соединения с сервером');
+    }
+});
+        </script>
+</body>
+</html>
+------
+# backend.py
+from flask import Flask, request, jsonify, g
+import sqlite3
+import os
+import hashlib
+from pathlib import Path
+
+app = Flask(__name__)
+DATABASE_PATH = 'D:/rpg/registrs.db'
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
+        db = g._database = sqlite3.connect(DATABASE_PATH)
+        db.row_factory = sqlite3.Row
+    return db
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, '_database', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Создаем таблицу игроков
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                level INTEGER DEFAULT 1,
+                gold INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Создаем таблицу сессий (если нужно)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id INTEGER NOT NULL,
+                token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(player_id) REFERENCES players(id)
+            )
+        ''')
+        
+        db.commit()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not all([username, email, password]):
+        return jsonify({'error': 'Все поля обязательны для заполнения'}), 400
+    
+    password_hash = hash_password(password)
+    
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            INSERT INTO players (username, email, password_hash)
+            VALUES (?, ?, ?)
+        ''', (username, email, password_hash))
+        
+        player_id = cursor.lastrowid
+        db.commit()
+        
+        return jsonify({
+            'id': player_id,
+            'username': username,
+            'level': 1,
+            'gold': 0
+        }), 201
+        
+    except sqlite3.IntegrityError as e:
+        if 'UNIQUE constraint failed: players.username' in str(e):
+            return jsonify({'error': 'Имя пользователя уже занято'}), 400
+        elif 'UNIQUE constraint failed: players.email' in str(e):
+            return jsonify({'error': 'Email уже используется'}), 400
+        return jsonify({'error': 'Ошибка регистрации'}), 400
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not all([username, password]):
+        return jsonify({'error': 'Логин и пароль обязательны'}), 400
+    
+    password_hash = hash_password(password)
+    
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT id, username, level, gold FROM players
+        WHERE username = ? AND password_hash = ?
+    ''', (username, password_hash))
+    
+    player = cursor.fetchone()
+    
+    if player:
+        return jsonify(dict(player)), 200
+    else:
+        return jsonify({'error': 'Неверный логин или пароль'}), 401
+
+@app.route('/api/update', methods=['POST'])
+def update_player():
+    data = request.json
+    player_id = data.get('id')
+    level = data.get('level', 1)
+    gold = data.get('gold', 0)
+    
+    if not player_id:
+        return jsonify({'error': 'ID игрока обязательно'}), 400
+    
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            UPDATE players
+            SET level = ?, gold = ?
+            WHERE id = ?
+        ''', (level, gold, player_id))
+        
+        db.commit()
+        return jsonify({'status': 'success'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            SELECT id, username, level, gold
+            FROM players
+            ORDER BY level DESC, gold DESC
+            LIMIT 10
+        ''')
+        
+        leaderboard = [dict(row) for row in cursor.fetchall()]
+        return jsonify(leaderboard), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True, port=5000)
+    -----
+    # backend.py
+from flask import Flask, request, jsonify, g
+import sqlite3
+import os
+import hashlib
+import secrets
+from pathlib import Path
+from functools import wraps
+
+app = Flask(__name__)
+DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'database.db')  # Относительный путь
+
+# Конфигурация
+app.config.update({
+    'SECRET_KEY': secrets.token_hex(32),
+    'DATABASE': DATABASE_PATH,
+    'PEPPER': 'your-random-pepper-string'  # Дополнительная защита паролей
+})
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        os.makedirs(os.path.dirname(app.config['DATABASE']), exist_ok=True)
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
+        db.row_factory = sqlite3.Row
+        db.execute('PRAGMA foreign_keys = ON')  # Включаем внешние ключи
+    return db
+
+def hash_password(password):
+    """Безопасное хэширование с солью и перцем"""
+    salt = secrets.token_hex(16)
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000  # Количество итераций
+    ).hex() + ':' + salt
+
+def verify_password(stored_hash, password):
+    """Проверка пароля"""
+    if ':' not in stored_hash:
+        return False
+    hashed, salt = stored_hash.split(':')
+    new_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000
+    ).hex()
+    return hashed == new_hash
+
+def validate_player_data(data):
+    """Валидация данных игрока"""
+    errors = {}
+    if len(data.get('username', '')) < 3:
+        errors['username'] = 'Не менее 3 символов'
+    if '@' not in data.get('email', ''):
+        errors['email'] = 'Некорректный email'
+    if len(data.get('password', '')) < 6:
+        errors['password'] = 'Не менее 6 символов'
+    return errors
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    try:
+        data = request.get_json()  # Используем get_json() вместо request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        
+        # Базовая валидация
+        if not all([username, email, password]):
+            return jsonify({'error': 'Все поля обязательны'}), 400
+        
+        # Подключаемся к БД
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Проверяем существование пользователя
+        cursor.execute('SELECT 1 FROM players WHERE username = ? OR email = ?', (username, email))
+        if cursor.fetchone():
+            return jsonify({'error': 'Пользователь уже существует'}), 400
+        
+        # Хэшируем пароль
+        password_hash = hash_password(password)
+        
+        # Создаем пользователя
+        cursor.execute('''
+            INSERT INTO players (username, email, password_hash)
+            VALUES (?, ?, ?)
+        ''', (username, email, password_hash))
+        
+        db.commit()
+        
+        return jsonify({
+            'id': cursor.lastrowid,
+            'username': username,
+            'email': email,
+            'level': 1,
+            'gold': 0
+        }), 201
+        
+    except Exception as e:
+        print("Ошибка в регистрации:", str(e))  # Логируем ошибку
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # Разрешить все домены
+
+@app.route('/api/player/<int:player_id>', methods=['GET'])
+def get_player(player_id):
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            SELECT id, username, level, gold 
+            FROM players WHERE id = ?
+        ''', (player_id,))
+        
+        player = cursor.fetchone()
+        if player:
+            return jsonify(dict(player)), 200
+        return jsonify({'error': 'Игрок не найден'}), 404
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+        -----
+        # backend.py
+from flask import Flask, request, jsonify, g
+import sqlite3
+import os
+import hashlib
+import secrets
+from pathlib import Path
+from functools import wraps
+
+app = Flask(__name__)
+DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'database.db')  # Относительный путь
+
+# Конфигурация
+app.config.update({
+    'SECRET_KEY': secrets.token_hex(32),
+    'DATABASE': DATABASE_PATH,
+    'PEPPER': 'your-random-pepper-string'  # Дополнительная защита паролей
+})
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        os.makedirs(os.path.dirname(app.config['DATABASE']), exist_ok=True)
+        db = g._database = sqlite3.connect(app.config['DATABASE'])
+        db.row_factory = sqlite3.Row
+        db.execute('PRAGMA foreign_keys = ON')  # Включаем внешние ключи
+    return db
+
+def hash_password(password):
+    """Безопасное хэширование с солью и перцем"""
+    salt = secrets.token_hex(16)
+    return hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000  # Количество итераций
+    ).hex() + ':' + salt
+
+def verify_password(stored_hash, password):
+    """Проверка пароля"""
+    if ':' not in stored_hash:
+        return False
+    hashed, salt = stored_hash.split(':')
+    new_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        (password + app.config['PEPPER']).encode(),
+        salt.encode(),
+        100000
+    ).hex()
+    return hashed == new_hash
+
+def validate_player_data(data):
+    """Валидация данных игрока"""
+    errors = {}
+    if len(data.get('username', '')) < 3:
+        errors['username'] = 'Не менее 3 символов'
+    if '@' not in data.get('email', ''):
+        errors['email'] = 'Некорректный email'
+    if len(data.get('password', '')) < 6:
+        errors['password'] = 'Не менее 6 символов'
+    return errors
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Требуются данные для регистрации'}), 400
+
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    # Валидация
+    if not all([username, email, password]):
+        return jsonify({'error': 'Все поля обязательны'}), 400
+
+    db = None
+    try:
+        db = get_db()
+        cursor = db.cursor()
+
+        # Проверка уникальности (важно!)
+        cursor.execute('SELECT id FROM players WHERE username = ? OR email = ?', 
+                      (username, email))
+        if cursor.fetchone():
+            return jsonify({'error': 'Имя пользователя или email уже заняты'}), 400
+
+        # Хэширование пароля
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        # Запись в БД с проверкой
+        cursor.execute('''
+            INSERT INTO players (username, email, password_hash, level, gold)
+            VALUES (?, ?, ?, 1, 0)
+        ''', (username, email, password_hash))
+
+        db.commit()  # Важно! Фиксируем изменения
+
+        # Проверяем что запись прошла
+        cursor.execute('SELECT id, username, level, gold FROM players WHERE id = ?', 
+                      (cursor.lastrowid,))
+        new_player = cursor.fetchone()
+
+        if not new_player:
+            raise Exception('Ошибка создания пользователя')
+
+        return jsonify(dict(new_player)), 201
+
+    except sqlite3.Error as e:
+        if db: db.rollback()
+        print(f"Ошибка SQLite: {str(e)}")  # Логируем
+        return jsonify({'error': 'Ошибка базы данных'}), 500
+        
+    except Exception as e:
+        if db: db.rollback()
+        print(f"Ошибка: {str(e)}")  # Логируем
+        return jsonify({'error': 'Внутренняя ошибка сервера'}), 500
+
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)  # Разрешить все домены
+
+@app.route('/api/player/<int:player_id>', methods=['GET'])
+def get_player(player_id):
+    try:
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('''
+            SELECT id, username, level, gold 
+            FROM players WHERE id = ?
+        ''', (player_id,))
+        
+        player = cursor.fetchone()
+        if player:
+            return jsonify(dict(player)), 200
+        return jsonify({'error': 'Игрок не найден'}), 404
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def init_db():
+    with app.app_context():
+        db = get_db()
+        cursor = db.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                level INTEGER DEFAULT 1,
+                gold INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Создаем индексы для быстрого поиска
+        cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_username ON players(username)')
+        cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_email ON players(email)')
+        
+        db.commit()
+    
+
+# Остальные endpoints остаются аналогичными, но с улучшенной валидацией
+
+if __name__ == '__main__':
+    init_db()
+    app.run(host='0.0.0.0', port=5000, debug=True)
+    
+    
